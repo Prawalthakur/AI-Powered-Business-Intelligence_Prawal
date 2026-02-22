@@ -584,7 +584,7 @@ def main():
         st.markdown("---")
         
         # Tabs for different management options
-        tab1, tab2, tab3, tab4 = st.tabs(["📊 Indexes", "🔧 Manage", "📤 Backup", "📈 Summary"])
+        tab1, tab2, tab3, tab4, tab5 = st.tabs(["📊 Indexes", "🔧 Manage", "📤 Backup", "📈 Summary", "🔄 Rebuild Data"])
         
         # Tab 1: View All Indexes
         with tab1:
@@ -722,6 +722,96 @@ def main():
                     st.info("No data available")
             except Exception as e:
                 st.error(f"Error: {e}")
+        
+        # Tab 5: Rebuild Data (Vector Store + Aggregated Metrics)
+        with tab5:
+            st.subheader("Rebuild Vector Store & Metrics")
+            st.markdown("Refresh your data by rebuilding the FAISS vector store and aggregated metrics cache.")
+            st.markdown("---")
+            
+            col1, col2 = st.columns(2)
+            
+            # Column 1: Rebuild Vector Store
+            with col1:
+                st.subheader("1️⃣ Rebuild Vector Store")
+                st.markdown(
+                    "Process CSV files from `data/raw/` and rebuild FAISS indexes with fresh embeddings."
+                )
+                
+                if st.button("🔄 Rebuild Vector Store", use_container_width=True, type="primary"):
+                    with st.spinner("Processing CSV files and rebuilding vector store..."):
+                        try:
+                            from src.loaders import load_uploaded_file
+                            from src.database import create_vector_store, save_vector_store
+                            from pathlib import Path
+                            
+                            rebuild_count = 0
+                            csv_dir = Path("data/raw")
+                            csv_files = list(csv_dir.glob("*.csv"))
+                            
+                            if not csv_files:
+                                st.error("No CSV files found in `data/raw/`")
+                            else:
+                                for csv_file in csv_files:
+                                    st.info(f"Processing {csv_file.name}...")
+                                    documents, _ = load_uploaded_file(str(csv_file))
+                                    
+                                    if documents:
+                                        index_name = csv_file.stem
+                                        vector_store = create_vector_store(documents, index_name)
+                                        
+                                        if vector_store:
+                                            save_vector_store(vector_store, index_name)
+                                            st.success(f"✓ Rebuilt: {index_name} ({len(documents)} chunks)")
+                                            rebuild_count += 1
+                                        else:
+                                            st.error(f"✗ Failed to create vector store for {csv_file.name}")
+                                    else:
+                                        st.error(f"✗ Could not process {csv_file.name}")
+                                
+                                if rebuild_count > 0:
+                                    st.success(f"✅ Successfully rebuilt {rebuild_count} vector store(s)")
+                        except Exception as e:
+                            st.error(f"Error rebuilding vector store: {e}")
+            
+            # Column 2: Rebuild Aggregated Metrics
+            with col2:
+                st.subheader("2️⃣ Rebuild Aggregated Metrics (PKL)")
+                st.markdown(
+                    "Build aggregated metrics cache from sales data for optimized chat responses."
+                )
+                
+                if st.button("📊 Build Aggregated Metrics", use_container_width=True, type="primary"):
+                    with st.spinner("Building aggregated metrics from CSV..."):
+                        try:
+                            from src.metrics_tool import build_aggregated_metrics_from_csv
+                            from src.config import PROCESSED_DATA_DIR
+                            from pathlib import Path
+                            
+                            csv_path = Path("data/raw/sales_data.csv")
+                            output_path = PROCESSED_DATA_DIR / "aggregated_metrics.pkl"
+                            
+                            if not csv_path.exists():
+                                st.error(f"CSV not found: {csv_path}")
+                            else:
+                                saved_path, agg_metrics = build_aggregated_metrics_from_csv(csv_path, output_path)
+                                st.success(f"✅ Aggregated metrics saved to {saved_path}")
+                                
+                                # Show summary
+                                st.info(f"Built aggregations for: {', '.join(agg_metrics.keys())}")
+                                
+                                with st.expander("View aggregation details"):
+                                    for name, df in agg_metrics.items():
+                                        if df is not None and not df.empty:
+                                            st.markdown(f"**{name}** ({len(df)} rows)")
+                                            st.dataframe(df.head(5), use_container_width=True)
+                        except Exception as e:
+                            st.error(f"Error building aggregated metrics: {e}")
+            
+            st.markdown("---")
+            st.info(
+                "💡 **Tip:** Rebuild both after adding or updating CSV data to ensure the chat has the latest information and metrics."
+            )
     
     elif page == "Upload & Process":
         st.header("📤 Upload and Process Data")
