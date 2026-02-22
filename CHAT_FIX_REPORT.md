@@ -107,5 +107,33 @@ To test:
 
 ---
 
-**Status:** ✅ RESOLVED  
-**Next Steps:** Monitor chat responses to ensure metrics context is being properly included in answers.
+**Status:** ✅ RESOLVED
+
+## Maintenance: Rebuilding After Data Changes
+
+If you add or update CSV data in `data/raw/`, rebuild both components via the UI:
+
+### Via Streamlit UI (Recommended)
+1. Open the app: `streamlit run app/main.py`
+2. Go to **Vector Store** tab (sidebar navigation)
+3. Click the **🔄 Rebuild Data** tab (5th tab)
+4. Click **🔄 Rebuild Vector Store** (left button)
+   - Processes all CSV files from `data/raw/`
+   - Rebuilds FAISS indexes with fresh embeddings
+   - Shows progress and success messages
+5. Click **📊 Build Aggregated Metrics** (right button)
+   - Pre-computes KPI aggregations
+   - Saves to `data/processed/aggregated_metrics.pkl`
+   - Displays aggregation details when complete
+6. Test the chat: Ask "What are my total sales?" — should show $2,049,100 (with your data)
+
+### Via Command Line
+```bash
+python -m scripts.build_agg_metrics --data data/raw/sales_data.csv
+```
+
+**Best Practice:** Run both actions (rebuild vector store + metrics) after any CSV data changes to keep chat responses accurate.
+
+---
+
+**Next Steps:** Monitor chat responses to ensure metrics context is being properly included in answers. Use the new Rebuild Data tab whenever data is updated.

@@ -38,7 +38,8 @@ python -c "from src.config import validate_configuration; validate_configuration
 2. `OPENAI_API_KEY` available and valid
 3. At least one FAISS index present in `vector_db/`
 4. `data/raw/sales_data.csv` exists for metrics
-5. No startup exception in terminal logs
+5. `data/processed/aggregated_metrics.pkl` exists and is recent
+6. No startup exception in terminal logs
 
 ## 4. Incident Triage
 
@@ -78,6 +79,30 @@ Recovery:
 1. rotate/replace key
 2. restart app process
 3. validate with a small assistant query
+
+### 5.3 Chat Returning Inaccurate Sales Numbers
+**Symptoms:** Chat says "Sales were $500" but Sales Metrics dashboard shows $2M+
+
+**Root Cause:** Vector store or aggregated metrics are stale
+
+**Resolution:**
+1. Via UI: `Vector Store` → `🔄 Rebuild Data` tab
+   - Click **🔄 Rebuild Vector Store** button
+   - Click **📊 Build Aggregated Metrics** button
+   - Wait for success messages
+2. Via CLI:
+   ```powershell
+   python -m scripts.build_agg_metrics --data data/raw/sales_data.csv
+   ```
+3. Verify: Ask chat "What are my total sales?" — should match Sales Metrics dashboard
+
+### 5.4 After Adding/Updating CSV Data
+**Always run these steps to keep chat accurate:**
+1. Place updated CSV in `data/raw/`
+2. Go to `Vector Store` → `🔄 Rebuild Data`
+3. Click both blue buttons:
+   - **🔄 Rebuild Vector Store** (indexes raw data for retrieval)
+   - **📊 Build Aggregated Metrics** (pre-computes totals for chat context)
 
 ### 5.3 No Vector Stores Found
 Symptoms:

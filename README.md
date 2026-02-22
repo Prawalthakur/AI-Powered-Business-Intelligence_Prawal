@@ -16,7 +16,7 @@ Capstone Sales Analysis is a Streamlit-based sales intelligence assistant that c
 ## Current Navigation
 1. Home
 2. Sales Metrics
-3. Vector Store
+3. Vector Store (includes 📊 Indexes, 🔧 Manage, 📤 Backup, 📈 Summary, 🔄 Rebuild Data)
 4. Upload & Process
 5. LLMOps
 
@@ -68,9 +68,25 @@ Use `LLMOps -> Model Evaluation` tab.
 - `src/llm.py` - LLM setup and RAG chain creation
 - `src/summary_metrics.py` - KPI generation and prompt metrics context
 
+## Data Management
+
+### Rebuilding Vector Store & Metrics
+When you update or add CSV data, rebuild both components via **Vector Store** → **🔄 Rebuild Data** tab:
+
+**Rebuild Vector Store**
+- Processes CSV files from `data/raw/`
+- Creates fresh FAISS embeddings
+- Run when CSV data is updated
+
+**Build Aggregated Metrics (PKL)**
+- Pre-computes KPI aggregations by region, product, month, etc.
+- Used by chat to provide accurate total sales and breakdowns
+- Run after CSV changes to ensure chat has latest metrics
+
 ## Notes
 - `QAEvalChain` compatibility is handled across legacy/new LangChain module paths.
 - Evaluation now uses normalized grade labels for cleaner summary counts.
+- Chat responses are enhanced with aggregated metrics context for accuracy (fixed Feb 2026).
 
 ## Security
 Read `SECURITY.md` for key handling and secure operation guidance.

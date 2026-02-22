@@ -16,7 +16,7 @@ Primary entry point: `app/main.py`.
 ### Sidebar Navigation
 1. Home
 2. Sales Metrics
-3. Vector Store
+3. Vector Store (with management and rebuild tabs)
 4. Upload & Process
 5. LLMOps
 
@@ -43,7 +43,10 @@ Primary entry point: `app/main.py`.
 ### 3.2 Vector Database
 - Vector indexes are managed in `vector_db/`
 - Supports create, load, merge, backup, rename, and delete operations
-- Dashboard and management are available in `Vector Store`
+- Dashboard and management are available in `Vector Store` page
+- **New (Feb 2026):** Consolidated rebuild actions in `Vector Store` → **🔄 Rebuild Data** tab with two buttons:
+  - **Rebuild Vector Store:** Rebuilds FAISS indexes from CSV files
+  - **Build Aggregated Metrics:** Pre-computes KPI aggregations for chat context
 
 ### 3.3 Chat & Retrieval
 - Chat interface loads available indexes and merges stores for retrieval
@@ -97,14 +100,28 @@ streamlit run app/main.py
 
 ---
 
-## 7. Known Behaviors
-- If no vector indexes exist, chat and eval surfaces show guidance instead of failing
-- If metrics source data is unavailable, metrics pages show error messaging and continue UI rendering
-- Evaluation grade labels are normalized (e.g., CORRECT/INCORRECT/PARTIAL) before summary counts
+## 7. Chat Accuracy & Metrics Integration
+
+**Issue (Feb 21, 2026):** Chat was returning lower sales numbers than the Sales Metrics dashboard because it was retrieving individual transaction rows instead of aggregated totals.
+
+**Solution:** Enhanced RAG chain to include aggregated metrics context:
+- Metrics are pre-computed from CSV and cached in `data/processed/aggregated_metrics.pkl`
+- Chat now always includes both individual document context AND aggregated summaries
+- Vector store rebuilt to use current data (7 years of daily sales: 2022-2028)
+
+**To maintain accuracy:** After updating CSV data, rebuild both components in `Vector Store` → **🔄 Rebuild Data**.
 
 ---
 
-## 8. Extension Points
+## 8. Known Behaviors
+- If no vector indexes exist, chat and eval surfaces show guidance instead of failing
+- If metrics source data is unavailable, metrics pages show error messaging and continue UI rendering
+- Evaluation grade labels are normalized (e.g., CORRECT/INCORRECT/PARTIAL) before summary counts
+- Chat responses now include aggregated KPI context for accurate sales totals and trends
+
+---
+
+## 9. Extension Points
 - Add new document loaders in `src/loaders.py`
 - Add additional scorecards in `src/summary_metrics.py`
 - Add route-specific chains/prompts in `src/llm.py`

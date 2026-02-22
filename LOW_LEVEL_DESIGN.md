@@ -49,8 +49,12 @@ Storage Layer
 - Shows KPI cards and Plotly charts via `render_visualizations()`
 
 ### 3.3 Vector Store
+- Tabs: 📊 Indexes | 🔧 Manage | 📤 Backup | 📈 Summary | 🔄 Rebuild Data
 - Lists indexes, details, backup options, rename/delete actions
 - Reads and updates FAISS metadata/state from `vector_db/`
+- **Rebuild Data tab:** Consolidates vector store and metrics rebuilding:
+  - Loads CSVs from `data/raw/`, rebuilds FAISS indexes with fresh embeddings
+  - Builds aggregated metrics from CSV, caches to `data/processed/aggregated_metrics.pkl`
 
 ### 3.4 Upload & Process
 - Batch creation of vector stores for all CSV/PDF files
