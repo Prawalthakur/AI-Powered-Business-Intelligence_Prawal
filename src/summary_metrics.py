@@ -243,13 +243,47 @@ def analyze_gender_region_performance(df: pd.DataFrame) -> Dict:
     }
 
 
+def analyze_age_region_performance(df: pd.DataFrame) -> Dict:
+    """
+    Analyzes sales performance by customer age group and region.
+    
+    Args:
+        df (pd.DataFrame): The processed sales data DataFrame.
+    
+    Returns:
+        dict: A dictionary containing age group-region performance insights.
+    """
+    if 'Age_Group' not in df.columns or 'Region' not in df.columns or 'Sales' not in df.columns:
+        return {}
+    
+    # Calculate total sales for each unique combination of Age_Group and Region
+    age_region_sales = df.groupby(['Age_Group', 'Region'])['Sales'].sum()
+    
+    if age_region_sales.empty:
+        return {}
+    
+    # Identify the age-region combination with the highest total sales
+    best_age_region_combo = age_region_sales.idxmax()
+    # Identify the age-region combination with the lowest total sales
+    worst_age_region_combo = age_region_sales.idxmin()
+    
+    return {
+        'age_region_sales': age_region_sales.to_dict(),
+        'best_age_region_combo': best_age_region_combo,
+        'best_age_region_sales': age_region_sales[best_age_region_combo],
+        'worst_age_region_combo': worst_age_region_combo,
+        'worst_age_region_sales': age_region_sales[worst_age_region_combo]
+    }
+
+
 def generate_text_chunks_and_metadata(
     overall_metrics: Dict,
     time_based_analysis: Dict,
     product_performance: Dict,
     regional_performance: Dict,
     customer_insights: Dict,
-    gender_region_performance: Dict
+    gender_region_performance: Dict,
+    age_region_performance: Dict
 ) -> List[Dict]:
     """
     Generates descriptive text chunks and associated metadata from various sales metric dictionaries.
@@ -261,6 +295,7 @@ def generate_text_chunks_and_metadata(
         regional_performance (dict): Dictionary of regional performance metrics.
         customer_insights (dict): Dictionary of customer insights metrics.
         gender_region_performance (dict): Dictionary of gender and region performance metrics.
+        age_region_performance (dict): Dictionary of age group and region performance metrics.
     
     Returns:
         list: A list of dictionaries with 'text' and 'metadata' keys.
@@ -359,6 +394,22 @@ def generate_text_chunks_and_metadata(
                 'metadata': {'category': category, 'metric_type': 'worst_gender_region_combo'}
             })
     
+    # 7. Age Group and Region Performance
+    if age_region_performance:
+        category = "Age-Region Performance"
+        if 'best_age_region_combo' in age_region_performance:
+            best_age, best_region = age_region_performance['best_age_region_combo']
+            chunks_with_metadata.append({
+                'text': f"The highest performing age-region combination was age group {best_age} in {best_region} with ${age_region_performance.get('best_age_region_sales', 0):,.2f}.",
+                'metadata': {'category': category, 'metric_type': 'best_age_region_combo'}
+            })
+        if 'worst_age_region_combo' in age_region_performance:
+            worst_age, worst_region = age_region_performance['worst_age_region_combo']
+            chunks_with_metadata.append({
+                'text': f"The lowest performing age-region combination was age group {worst_age} in {worst_region} with ${age_region_performance.get('worst_age_region_sales', 0):,.2f}.",
+                'metadata': {'category': category, 'metric_type': 'worst_age_region_combo'}
+            })
+    
     return chunks_with_metadata
 
 
@@ -403,6 +454,7 @@ def generate_summary_metrics(csv_file_path: Optional[str] = None) -> Dict:
         regional_performance = analyze_regional_performance(processed_data)
         customer_insights = analyze_customer_insights(processed_data)
         gender_region_performance = analyze_gender_region_performance(processed_data)
+        age_region_performance = analyze_age_region_performance(processed_data)
         
         # Generate text chunks
         structured_insights = generate_text_chunks_and_metadata(
@@ -411,7 +463,8 @@ def generate_summary_metrics(csv_file_path: Optional[str] = None) -> Dict:
             product_performance,
             regional_performance,
             customer_insights,
-            gender_region_performance
+            gender_region_performance,
+            age_region_performance
         )
         
         return {
@@ -423,6 +476,7 @@ def generate_summary_metrics(csv_file_path: Optional[str] = None) -> Dict:
             'regional_performance': regional_performance,
             'customer_insights': customer_insights,
             'gender_region_performance': gender_region_performance,
+            'age_region_performance': age_region_performance,
             'structured_insights': structured_insights
         }
     
@@ -452,7 +506,7 @@ def get_formatted_summary(metrics: Dict) -> str:
     region = metrics.get('regional_performance', {})
     customer = metrics.get('customer_insights', {})
     gender_region = metrics.get('gender_region_performance', {})
-    customer = metrics.get('customer_insights', {})
+    age_region = metrics.get('age_region_performance', {})
     
     avg_satisfaction = customer.get('avg_satisfaction')
     avg_satisfaction_text = f"{avg_satisfaction:.2f}" if isinstance(avg_satisfaction, (int, float)) else "N/A"
@@ -488,6 +542,10 @@ CUSTOMER INSIGHTS:
 GENDER-REGION PERFORMANCE:
 - Best Combo: {gender_region.get('best_gender_region_combo', ('N/A', 'N/A'))[0]} in {gender_region.get('best_gender_region_combo', ('N/A', 'N/A'))[1]} (${gender_region.get('best_gender_region_sales', 0):,.2f})
 - Worst Combo: {gender_region.get('worst_gender_region_combo', ('N/A', 'N/A'))[0]} in {gender_region.get('worst_gender_region_combo', ('N/A', 'N/A'))[1]} (${gender_region.get('worst_gender_region_sales', 0):,.2f})
+
+AGE-REGION PERFORMANCE:
+- Best Combo: Age {age_region.get('best_age_region_combo', ('N/A', 'N/A'))[0]} in {age_region.get('best_age_region_combo', ('N/A', 'N/A'))[1]} (${age_region.get('best_age_region_sales', 0):,.2f})
+- Worst Combo: Age {age_region.get('worst_age_region_combo', ('N/A', 'N/A'))[0]} in {age_region.get('worst_age_region_combo', ('N/A', 'N/A'))[1]} (${age_region.get('worst_age_region_sales', 0):,.2f})
 """
     return summary
 
@@ -512,6 +570,7 @@ def get_prompt_metrics_context(metrics: Dict, max_products: int = 5, query: Opti
     region = metrics.get('regional_performance', {})
     customer = metrics.get('customer_insights', {})
     gender_region = metrics.get('gender_region_performance', {})
+    age_region = metrics.get('age_region_performance', {})
 
     top_products = []
     product_stats = product.get('product_stats', {})
@@ -559,9 +618,14 @@ def get_prompt_metrics_context(metrics: Dict, max_products: int = 5, query: Opti
     if best_combo:
         gender_region_lines.append(f"Best gender-region: {best_combo[0]} in {best_combo[1]}")
 
+    age_region_lines = []
+    best_age_combo = age_region.get('best_age_region_combo')
+    if best_age_combo:
+        age_region_lines.append(f"Best age-region: Age {best_age_combo[0]} in {best_age_combo[1]}")
+
     query_text = (query or "").lower()
     if not query_text:
-        return "\n".join(overall_lines + time_lines + product_lines + region_lines + customer_lines + gender_region_lines)
+        return "\n".join(overall_lines + time_lines + product_lines + region_lines + customer_lines + gender_region_lines + age_region_lines)
 
     def has_any(keywords: list[str]) -> bool:
         return any(k in query_text for k in keywords)
@@ -579,6 +643,8 @@ def get_prompt_metrics_context(metrics: Dict, max_products: int = 5, query: Opti
         sections.extend(customer_lines)
     if has_any(["gender", "region", "combo", "combination"]):
         sections.extend(gender_region_lines)
+    if has_any(["age", "region", "combo", "combination", "demographic"]):
+        sections.extend(age_region_lines)
 
     return "\n".join(sections)
 
